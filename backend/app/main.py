@@ -28,6 +28,6 @@ app.include_router(plan.router)
 app.include_router(session.router)
 app.include_router(ping.router)
 
-@app.get("/health")
-def health_check():
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health():
     return {"status": "ok"}
