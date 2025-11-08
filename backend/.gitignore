@@ -1,0 +1,54 @@
+# 🐍 Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# 🧪 Test & Coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
+nosetests.xml
+coverage.xml
+
+# 📦 Virtual Environment
+venv/
+.env
+.env.*
+
+# 🗃️ Local Dev & Secrets
+*.log
+*.pid
+*.DS_Store
+*.idea/
+.vscode/
+
+# 🐋 Docker
+*.dockerfile
+docker-compose.yml
+*.tar
+*.img
+
+# 📜 Requirements lock files (optional)
+Pipfile
+Pipfile.lock
+poetry.lock
+
+# 🧰 Build & Deployment
+build/
+dist/
+*.egg-info/
+instance/
+
+# ⛽ UptimeRobot or CI artifacts
+*.retry
+*.bak
+
+# ☁️ Environment examples (keep tracked)
+!.env.example
