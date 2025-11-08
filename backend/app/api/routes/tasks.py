@@ -1,12 +1,17 @@
 from fastapi import APIRouter
-from app.models import Task
-from sqlmodel import Session, select
-from app.core.database import engine
 
-router = APIRouter(prefix="/tasks")
+router = APIRouter(prefix="/tasks", tags=["tasks"])
 
-@router.get("/")
+@router.get("")
 def get_tasks():
-    with Session(engine) as session:
-        tasks = session.exec(select(Task)).all()
-        return tasks
+    """Return a mock list of tasks."""
+    return [
+        {"id": 1, "title": "Write project README", "completed": True},
+        {"id": 2, "title": "Setup backend routes", "completed": False},
+        {"id": 3, "title": "Initialize frontend project", "completed": False},
+    ]
+
+@router.post("")
+def create_task():
+    """Mock create task response."""
+    return {"id": 4, "title": "New Task", "completed": False}
