@@ -1,11 +1,11 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import router as api_router
-from app.api.routes import tasks
-from app.api.routes import plan
-from app.api.routes import session
-from app.api.routes import ping
+from api.routes import router as api_router
+from api.routes import tasks
+from api.routes import plan
+from api.routes import session
+from api.routes import ping
 
 origins = [
     "http://localhost:3000",      # local frontend
