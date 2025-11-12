@@ -56,7 +56,7 @@
   --color-card-foreground: hsl(var(--color-foreground));
   
   /* Font family */
-  --font-family-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-family-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* --------------------------------------------------------
