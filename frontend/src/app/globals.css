@@ -1,85 +1,80 @@
-/* --------------------------------------------------------
-   1️⃣ Tailwind layers
---------------------------------------------------------- */
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+@import "tailwindcss";
 
 /* --------------------------------------------------------
-   2️⃣ FEHRIST COLOR THEME
+   CSS Variables - Light & Dark Mode
+--------------------------------------------------------- */
+@layer base {
+  :root {
+    /* 🌞 Light mode colors */
+    --color-background: 44 54% 83%;        /* Dutch white */
+    --color-foreground: 0 9% 17%;          /* Night */
+    --color-primary: 48 55% 76%;           /* Vanilla */
+    --color-primary-foreground: 0 0% 8%;
+    --color-secondary: 104 35% 17%;        /* Pakistan green */
+    --color-secondary-foreground: 44 54% 83%;
+    --color-accent: 15 93% 32%;            /* Rufous */
+    --color-accent-foreground: 44 54% 83%;
+    --color-border: 48 55% 76%;
+    --color-ring: 104 35% 17%;
+  }
+
+  .dark {
+    /* 🌙 Dark mode colors */
+    --color-background: 0 6% 16%;          /* Raisin black */
+    --color-foreground: 44 54% 83%;        /* Dutch white */
+    --color-primary: 20 84% 44%;           /* Sinopia */
+    --color-primary-foreground: 0 0% 100%;
+    --color-secondary: 102 36% 28%;        /* Dark moss green */
+    --color-secondary-foreground: 44 54% 83%;
+    --color-accent: 20 84% 44%;            /* Sinopia */
+    --color-accent-foreground: 44 54% 83%;
+    --color-border: 0 7% 27%;
+    --color-ring: 20 84% 44%;
+  }
+}
+
+/* --------------------------------------------------------
+   Theme Configuration (Tailwind v4)
 --------------------------------------------------------- */
 @theme {
-  /* 🌞 Light mode */
-  --color-background: 44 54% 83%;        /* Dutch white (#ECE1C1) */
-  --color-foreground: 0 0% 8%;           /* Night (#141414) */
-
-  --color-primary: 48 55% 76%;           /* Vanilla (#E2D3A2) */
-  --color-primary-foreground: 0 0% 8%;
-
-  --color-secondary: 104 35% 17%;        /* Pakistan green (#24381A) */
-  --color-secondary-foreground: 44 54% 83%;
-
-  --color-accent: 15 93% 32%;            /* Rufous (#9E2105) */
-  --color-accent-foreground: 44 54% 83%;
-
-  --color-border: 48 55% 76%;
-  --color-ring: 104 35% 17%;
-
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  --text-5xl: 3rem;
-}
-
-/* 🌙 Dark mode overrides */
-.dark {
-  --color-background: 0 6% 16%;          /* Raisin black (#2B2727) */
-  --color-foreground: 44 54% 83%;        /* Dutch white (#ECE1C1) */
-
-  --color-primary: 20 84% 44%;           /* Sinopia (#D92E08) */
-  --color-primary-foreground: 0 0% 100%;
-
-  --color-secondary: 102 36% 28%;        /* Dark moss green (#3F622D) */
-  --color-secondary-foreground: 44 54% 83%;
-
-  --color-accent: 20 84% 44%;            /* Sinopia */
-  --color-accent-foreground: 44 54% 83%;
-
-  --color-border: 0 7% 27%;
-  --color-ring: 20 84% 44%;
-}
-
-@layer base {
-  .font-light {
-    font-weight: 300;
-  }
-  .font-normal {
-    font-weight: 400;
-  }
-  .font-medium {
-    font-weight: 500;
-  }
-  .font-semibold {
-    font-weight: 600;
-  }
-  .font-bold {
-    font-weight: 700;
-  }
+  /* Colors */
+  --color-background: hsl(var(--color-background));
+  --color-foreground: hsl(var(--color-foreground));
+  --color-primary: hsl(var(--color-primary));
+  --color-primary-foreground: hsl(var(--color-primary-foreground));
+  --color-secondary: hsl(var(--color-secondary));
+  --color-secondary-foreground: hsl(var(--color-secondary-foreground));
+  --color-accent: hsl(var(--color-accent));
+  --color-accent-foreground: hsl(var(--color-accent-foreground));
+  --color-border: hsl(var(--color-border));
+  --color-ring: hsl(var(--color-ring));
+  --color-muted: hsl(var(--color-border));
+  --color-muted-foreground: hsl(var(--color-foreground) / 0.6);
+  
+  /* Card colors */
+  --color-card: hsl(var(--color-background));
+  --color-card-foreground: hsl(var(--color-foreground));
+  
+  /* Font family */
+  --font-family-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* --------------------------------------------------------
-   3️⃣ GLOBAL BASE STYLES
+   Base Styles
 --------------------------------------------------------- */
-html, body {
-  min-height: 100%;
-  font-family: var(--font-dm-sans), sans-serif;
-  background-color: hsl(var(--color-background));
-  color: hsl(var(--color-foreground));
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+@layer base {
+  * {
+    border-color: hsl(var(--color-border));
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: hsl(var(--color-background));
+    color: hsl(var(--color-foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
