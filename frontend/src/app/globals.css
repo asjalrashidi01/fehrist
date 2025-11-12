@@ -1,80 +1,135 @@
 @import "tailwindcss";
 
 /* --------------------------------------------------------
-   CSS Variables - Light & Dark Mode
+   DESIGN SYSTEM: Simplified — Fehrist Palette
 --------------------------------------------------------- */
 @layer base {
   :root {
-    /* 🌞 Light mode colors */
-    --color-background: 44 54% 83%;        /* Dutch white */
-    --color-foreground: 0 9% 17%;          /* Night */
-    --color-primary: 48 55% 76%;           /* Vanilla */
-    --color-primary-foreground: 0 0% 8%;
-    --color-secondary: 104 35% 17%;        /* Pakistan green */
-    --color-secondary-foreground: 44 54% 83%;
-    --color-accent: 15 93% 32%;            /* Rufous */
-    --color-accent-foreground: 44 54% 83%;
-    --color-border: 48 55% 76%;
-    --color-ring: 104 35% 17%;
+    /* 🌞 Light Mode */
+    --color-background: hsl(45 42% 83%); /* Dutch white (#ece1c1) */
+    --color-foreground: hsl(0 0% 8%);    /* Night (#141414) */
+
+    --color-surface: hsl(45 48% 76%);    /* Vanilla (#e2d3a2) */
+    --color-surface-foreground: hsl(0 0% 8%);
+
+    --color-primary: hsl(94 38% 16%);    /* Pakistan green (#24381a) */
+    --color-primary-foreground: hsl(45 42% 83%);
+
+    --color-accent: hsl(10 96% 32%);     /* Rufous (#9e2105) */
+    --color-accent-foreground: hsl(45 42% 83%);
+
+    --color-muted: hsl(45 30% 70%);
+    --color-muted-foreground: hsl(0 0% 30%);
+
+    --color-border: hsl(45 35% 70%);
+    --color-input: hsl(45 40% 75%);
+    --color-ring: hsl(94 38% 16%);
+
+    --radius: 1rem;
+
+    /* ✨ Glow */
+    --ai-glow-start: var(--color-primary);
+    --ai-glow-end: var(--color-accent);
   }
 
   .dark {
-    /* 🌙 Dark mode colors */
-    --color-background: 0 6% 16%;          /* Raisin black */
-    --color-foreground: 44 54% 83%;        /* Dutch white */
-    --color-primary: 20 84% 44%;           /* Sinopia */
-    --color-primary-foreground: 0 0% 100%;
-    --color-secondary: 102 36% 28%;        /* Dark moss green */
-    --color-secondary-foreground: 44 54% 83%;
-    --color-accent: 20 84% 44%;            /* Sinopia */
-    --color-accent-foreground: 44 54% 83%;
-    --color-border: 0 7% 27%;
-    --color-ring: 20 84% 44%;
+    /* 🌙 Dark Mode */
+    --color-background: hsl(0 7% 16%);   /* Raisin black (#2b2727) */
+    --color-foreground: hsl(45 42% 83%); /* Dutch white 2 (#ece1c1) */
+
+    --color-surface: hsl(0 6% 27%);      /* Taupe (#4b4444) */
+    --color-surface-foreground: hsl(45 42% 83%);
+
+    --color-primary: hsl(94 38% 28%);    /* Dark moss green (#3f622d) */
+    --color-primary-foreground: hsl(45 42% 83%);
+
+    --color-accent: hsl(10 94% 44%);     /* Sinopia (#d92e08) */
+    --color-accent-foreground: hsl(45 42% 83%);
+
+    --color-muted: hsl(0 6% 22%);
+    --color-muted-foreground: hsl(45 20% 65%);
+
+    --color-border: hsl(0 6% 22%);
+    --color-input: hsl(0 6% 27%);
+    --color-ring: hsl(94 38% 28%);
+
+    /* ✨ Glow */
+    --ai-glow-start: var(--color-primary);
+    --ai-glow-end: var(--color-accent);
   }
 }
 
 /* --------------------------------------------------------
-   Theme Configuration (Tailwind v4)
+   THEME TOKENS — Tailwind v4-compatible mapping
 --------------------------------------------------------- */
 @theme {
-  /* Colors */
-  --color-background: hsl(var(--color-background));
-  --color-foreground: hsl(var(--color-foreground));
-  --color-primary: hsl(var(--color-primary));
-  --color-primary-foreground: hsl(var(--color-primary-foreground));
-  --color-secondary: hsl(var(--color-secondary));
-  --color-secondary-foreground: hsl(var(--color-secondary-foreground));
-  --color-accent: hsl(var(--color-accent));
-  --color-accent-foreground: hsl(var(--color-accent-foreground));
-  --color-border: hsl(var(--color-border));
-  --color-ring: hsl(var(--color-ring));
-  --color-muted: hsl(var(--color-border));
-  --color-muted-foreground: hsl(var(--color-foreground) / 0.6);
-  
-  /* Card colors */
-  --color-card: hsl(var(--color-background));
-  --color-card-foreground: hsl(var(--color-foreground));
-  
-  /* Font family */
-  --font-family-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-surface: var(--color-surface);
+  --color-surface-foreground: var(--color-surface-foreground);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-accent: var(--color-accent);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-border: var(--color-border);
+  --color-input: var(--color-input);
+  --color-ring: var(--color-ring);
 }
 
 /* --------------------------------------------------------
-   Base Styles
+   BASE STYLES — Textures & Typography
 --------------------------------------------------------- */
 @layer base {
   * {
-    border-color: hsl(var(--color-border));
-  }
-
-  html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    border-color: var(--color-border);
   }
 
   body {
-    background-color: hsl(var(--color-background));
-    color: hsl(var(--color-foreground));
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: "DM Sans", system-ui, -apple-system, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  body:not(.dark) {
+    background-image:
+      radial-gradient(circle at 20% 50%, hsl(45 48% 85% / 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, hsl(45 42% 80% / 0.3) 0%, transparent 50%);
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(circle at 30% 40%, hsl(0 6% 18% / 0.5) 0%, transparent 50%),
+      radial-gradient(circle at 70% 60%, hsl(0 6% 20% / 0.5) 0%, transparent 60%);
+  }
+}
+
+/* --------------------------------------------------------
+   UTILITIES — Animations & Scrollbar Hiding
+--------------------------------------------------------- */
+@layer utilities {
+  @keyframes ai-pulse {
+    0%, 100% {
+      box-shadow: 0 0 20px var(--ai-glow-start),
+                  0 0 40px var(--ai-glow-end);
+    }
+    50% {
+      box-shadow: 0 0 30px var(--ai-glow-start),
+                  0 0 60px var(--ai-glow-end);
+    }
+  }
+
+  .ai-glow {
+    animation: ai-pulse 3s ease-in-out infinite;
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
