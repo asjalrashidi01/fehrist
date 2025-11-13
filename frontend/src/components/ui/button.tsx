@@ -20,6 +20,10 @@ const buttonVariants = cva(
           "hover:bg-background hover:text-foreground",
         sidebaraccent:
           "hover:bg-background hover:text-accent",
+        card:
+          "hover:text-foreground",
+        cardaccent:
+          "hover:text-accent",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
