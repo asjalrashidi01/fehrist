@@ -13,111 +13,158 @@ import {
 
 import { useTaskStore } from "../../store/store"
 import { Priority, Difficulty } from "@/lib/types/task"
+import { TimeInput } from "./TimeInput"
+import { cn } from "@/lib/utils"
 
 export function TaskForm() {
   const { addTask } = useTaskStore()
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [priority, setPriority] = useState<Priority>(Priority.Medium)
-  const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.Medium)
-  const [durationMinutes, setDurationMinutes] = useState(60)
+  const [priority, setPriority] = useState("")
+  const [difficulty, setDifficulty] = useState("")
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null)
+  const [showDescription, setShowDescription] = useState(false)
+
+  const [showErrors, setShowErrors] = useState(false)
+  const [shakes, setShakes] = useState({
+    name: false,
+    duration: false,
+    priority: false,
+    difficulty: false,
+  })
+
+  const triggerShake = (field: keyof typeof shakes) => {
+    setShakes(prev => ({ ...prev, [field]: false })) // reset
+    requestAnimationFrame(() => {
+      setShakes(prev => ({ ...prev, [field]: true })) // retrigger
+    })
+    setTimeout(() => {
+      setShakes(prev => ({ ...prev, [field]: false })) // cleanup
+    }, 350)
+  }
 
   const handleAdd = () => {
-    if (!name.trim()) return
 
+    const missingName = !name.trim()
+    const missingDuration = durationMinutes == null
+    const missingPriority = priority === ""
+    const missingDifficulty = difficulty === ""
+
+    if (missingName || missingDuration || missingPriority || missingDifficulty) {
+
+      if (missingName) triggerShake("name")
+      if (missingDuration) triggerShake("duration")
+      if (missingPriority) triggerShake("priority")
+      if (missingDifficulty) triggerShake("difficulty")
+
+      setShowErrors(true)
+      return
+    }
+
+    setShowErrors(false)
+    
     addTask({
       name,
       description,
-      priority,
-      difficulty,
-      durationMinutes,
-      status: undefined!, // store sets Status.Added
+      priority: Number(priority) as Priority,
+      difficulty: Number(difficulty) as Difficulty,
+      durationMinutes: Number(durationMinutes),
     })
 
-    // Reset fields
     setName("")
     setDescription("")
-    setPriority(Priority.Medium)
-    setDifficulty(Difficulty.Medium)
-    setDurationMinutes(60)
+    setPriority("")
+    setDifficulty("")
+    setDurationMinutes(null)
+    setShowDescription(false)
   }
 
   return (
-    <div className="w-full max-w-6xl flex flex-col gap-4 rounded-xl p-6 bg-surface/20 border border-border mb-24">
+    <div className="w-full max-w-6xl mx-auto bg-surface/20 shadow-xl backdrop-blur-sm border border-border/60 rounded-2xl p-5 flex flex-col gap-4 mb-12">
 
-      {/* Top: Name + Duration */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* ================= HERO ROW ================= */}
+      <div className="flex gap-3 items-center">
         <Input
-          placeholder="Task name"
+          placeholder="Write a task… anything that’s on your mind."
           value={name}
           onChange={(e) => setName(e.target.value)}
+          className={cn(
+            "flex-grow h-9 rounded-xl text-foreground bg-surface ",
+            showErrors && !name.trim() && "border-accent",
+            shakes.name && "shake"
+          )}
         />
+
+        {/* Duration */}
+        <TimeInput
+          value={durationMinutes}
+          onChange={setDurationMinutes}
+          error={showErrors && durationMinutes == null}
+          shake={shakes.duration}
+        />
+      </div>
+
+      {/* ================= REQUIRED FIELDS ================= */}
+      <div className="flex items-center justify-center gap-3">
+
+        {/* Priority */}
+        <Select value={priority} onValueChange={setPriority}>
+          <SelectTrigger
+            className={cn(
+              "h-12 rounded-xl",
+              showErrors && priority === "" && "border-accent",
+              shakes.priority && "shake"
+            )}
+          >
+            <SelectValue placeholder="How important is this?" />
+          </SelectTrigger>
+          <SelectContent className="bg-surface rounded-md border border-border shadow-md">
+            <SelectItem value={String(Priority.Low)}>Can wait</SelectItem>
+            <SelectItem value={String(Priority.Medium)}>Important</SelectItem>
+            <SelectItem value={String(Priority.High)}>Essential</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Difficulty */}
+        <Select value={difficulty} onValueChange={setDifficulty}>
+          <SelectTrigger
+            className={cn(
+              "h-12 rounded-xl",
+              showErrors && difficulty === "" && "border-accent",
+              shakes.difficulty && "shake"
+            )}
+          >
+            <SelectValue placeholder="How challenging is this?" />
+          </SelectTrigger>
+          <SelectContent className="bg-surface rounded-md border border-border shadow-md">
+            <SelectItem value={String(Difficulty.Easy)}>Easy</SelectItem>
+            <SelectItem value={String(Difficulty.Medium)}>Moderate</SelectItem>
+            <SelectItem value={String(Difficulty.Hard)}>Challenging</SelectItem>
+          </SelectContent>
+        </Select>
+        
+      </div>
+
+      <div className="flex items-center justify-center gap-3">
 
         <Input
-          placeholder="Duration (minutes)"
-          type="number"
-          value={durationMinutes}
-          onChange={(e) => setDurationMinutes(Number(e.target.value))}
+          placeholder="Add some details… or don’t"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="h-9 rounded-xl"
         />
+
+        <div className="flex justify-center">
+          <Button 
+            className="h-9 px-16 w-40 rounded-xl font-medium text-sm cursor-pointer"
+            onClick={handleAdd}
+          >
+            Add
+          </Button>
+        </div>
       </div>
 
-      {/* Description */}
-      <Input
-        placeholder="Description (optional)"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-      />
-
-      {/* Dropdown Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-
-        {/* Priority Dropdown */}
-        <Select
-          value={String(priority)}
-          onValueChange={(v) => setPriority(Number(v) as Priority)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={String(Priority.Low)}>Low</SelectItem>
-            <SelectItem value={String(Priority.Medium)}>Medium</SelectItem>
-            <SelectItem value={String(Priority.High)}>High</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Difficulty Dropdown */}
-        <Select
-          value={String(difficulty)}
-          onValueChange={(v) => setDifficulty(Number(v) as Difficulty)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Difficulty" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={String(Difficulty.Easy)}>Easy</SelectItem>
-            <SelectItem value={String(Difficulty.Medium)}>Medium</SelectItem>
-            <SelectItem value={String(Difficulty.Hard)}>Hard</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Add Task Button */}
-        <Button
-          className="col-span-2 md:col-span-1"
-          onClick={handleAdd}
-        >
-          Add Task
-        </Button>
-
-        {/* Generate Button */}
-        <Button
-          variant="secondary"
-          className="col-span-2 md:col-span-1"
-        >
-          Generate
-        </Button>
-      </div>
     </div>
   )
 }
