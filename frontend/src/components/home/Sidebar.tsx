@@ -2,15 +2,32 @@
 
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { Sun, Moon, LogOut, Settings } from "lucide-react";
+import { Sun, Moon, LogOut, Settings, Home } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export function Sidebar() {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
 
   return (
     <aside className="h-screen w-18 flex flex-col justify-between p-4 bg-surface border-r border-border transition-colors duration-300">
-      {/* Theme Toggle */}
-      <div className="flex justify-center pt-1">
+      <div className="flex flex-col items-center gap-5 pt-1">
+
+        {/* Home Button (NEW) */}
+        <Button
+          variant="sidebar"
+          size="icon"
+          onClick={() => router.push("/")}
+          className="cursor-pointer transition-colors duration-200 rounded-2xl"
+          aria-label="Go Home"
+        >
+          <Home size={20} />
+        </Button>
+      </div>
+
+      {/* Utility Buttons */}
+      <div className="flex flex-col items-center gap-5">
+        {/* Theme Toggle */}
         <Button
           variant="sidebar"
           size="icon"
@@ -20,10 +37,7 @@ export function Sidebar() {
         >
           {theme === "light" ? <Sun size={20} /> : <Moon size={20} />}
         </Button>
-      </div>
-
-      {/* Utility Buttons */}
-      <div className="flex flex-col items-center gap-5 pb-1">
+        
         {/* Settings */}
         <Button
           variant="sidebar"

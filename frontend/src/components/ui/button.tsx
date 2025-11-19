@@ -46,8 +46,6 @@ const buttonVariants = cva(
 
           hover:shadow-[0_0_10px_hsla(270,60%,55%,0.45),
                         0_0_16px_hsla(220,60%,60%,0.35)]
-
-          hover:scale-105
         `,
         link: "text-primary underline-offset-4 hover:underline",
       },
