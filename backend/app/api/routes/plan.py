@@ -210,20 +210,24 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
         remaining = t.durationMinutes
 
         while remaining > 0:
+            original = t.durationMinutes
+            total_parts = math.ceil(original / blockLength)
+            completed = math.floor((original - remaining) / blockLength)
+            current_part = completed + 1
+
             if remaining > blockLength:
                 dur = blockLength
-                original = t.durationMinutes
-                total_parts = math.ceil(original / blockLength)
-                completed = math.floor((original - remaining) / blockLength)
-                current_part = completed + 1
+            else:
+                dur = remaining
 
+            # ALWAYS generate split_info when total_parts > 1
+            if total_parts > 1:
                 split_info = {
                     "originalTaskId": t.id,
                     "part": current_part,
                     "totalParts": total_parts
                 }
             else:
-                dur = remaining
                 split_info = None
 
             add_to_work_block(dur, [t], split_info)
