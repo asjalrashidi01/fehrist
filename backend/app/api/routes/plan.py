@@ -1,3 +1,4 @@
+import math
 from typing import List
 from fastapi import APIRouter
 from models.plan import Task, PlanBlock, PlanGenerateRequest, PlanGenerateResponse, PlanRegenerateRequest, PlanRegenerateResponse
@@ -57,6 +58,10 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
     longBreak = 15
     substantial_blocks = 0  # track blocks >=20 min for long-break logic
 
+    # track split metadata per original task
+    # format: task_split_meta[task_id] = {"totalParts": int, "nextPart": int}
+    task_split_meta = {}
+
     # 🔹 RULE B4: No break at session end, helper inside loop
     def maybe_add_break(last_block_duration):
         nonlocal blockId, substantial_blocks
@@ -103,7 +108,18 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
 
         split_info = None
         if anchor.durationMinutes > blockLength:
-            split_info = {"originalTaskId": anchor.id, "part": 1, "totalParts": (anchor.durationMinutes // blockLength) + 1}
+            # compute totalParts from original duration BEFORE we mutate anything
+            total_parts = math.ceil(anchor.durationMinutes / blockLength)
+            if anchor.id not in task_split_meta:
+                task_split_meta[anchor.id] = {"totalParts": total_parts, "nextPart": 1}
+            meta = task_split_meta[anchor.id]
+
+            split_info = {
+                "originalTaskId": anchor.id,
+                "part": meta["nextPart"],   # assigned chunk number
+                "totalParts": meta["totalParts"]
+            }
+            meta["nextPart"] += 1
 
         append_work_block(plan, blockId, split_dur, [anchor], split_info)
         blockId += 1
@@ -161,11 +177,19 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
                 split_dur = blockLength - used
 
                 if split_dur > 0:
+                    # compute totalParts based on current (original for this task)
+                    total_parts = math.ceil(t.durationMinutes / blockLength)
+                    if t.id not in task_split_meta:
+                        task_split_meta[t.id] = {"totalParts": total_parts, "nextPart": 1}
+                    meta = task_split_meta[t.id]
+
                     split_info = {
                         "originalTaskId": t.id,
-                        "part": 1,
-                        "totalParts": (t.durationMinutes // blockLength) + 1
+                        "part": meta["nextPart"],
+                        "totalParts": meta["totalParts"]
                     }
+                    meta["nextPart"] += 1
+
                     block_tasks.append(t)  # same task id
                     append_work_block(plan, blockId, split_dur, [t], split_info)
 
