@@ -10,12 +10,17 @@ class Task(BaseModel):
     durationMinutes: int
     status: int
 
+class SplitInfo(BaseModel):
+    originalTaskId: str
+    part: int
+    totalParts: int
+
 class PlanBlock(BaseModel):
     blockId: int
     type: Literal["work", "break"]
     durationMinutes: int
     tasks: List[str]
-    splitInfo: Optional[dict] = None
+    splitInfos: Optional[List[SplitInfo]] = None
 
 class PlanGenerateRequest(BaseModel):
     tasks: List[Task]

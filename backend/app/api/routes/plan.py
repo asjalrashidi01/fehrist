@@ -1,7 +1,7 @@
 import math
 from typing import List
 from fastapi import APIRouter
-from models.plan import Task, PlanBlock, PlanGenerateRequest, PlanGenerateResponse, PlanRegenerateRequest, PlanRegenerateResponse
+from models.plan import Task, SplitInfo, PlanBlock, PlanGenerateRequest, PlanGenerateResponse, PlanRegenerateRequest, PlanRegenerateResponse
 
 import re
 
@@ -20,13 +20,10 @@ router = APIRouter(prefix="/plan", tags=["plan"])
 @router.post("/generate", response_model=PlanGenerateResponse)
 def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
 
-    tasks = [t for t in payload.tasks if t.status != 2 and t.status != 3]  # exclude completed / deleted
+    tasks = [t for t in payload.tasks if t.status not in (2, 3)]
     if not tasks:
         return PlanGenerateResponse(
-            blocks=[],
-            totalDurationMinutes=0,
-            totalBlocks=0,
-            quickTaskUsed=False
+            blocks=[], totalDurationMinutes=0, totalBlocks=0, quickTaskUsed=False
         )
 
     # Separate quick tasks
@@ -41,16 +38,16 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
         quick_tasks.remove(quick_motivation)
         quick_task_used = True
 
-    # Sort remaining tasks
+    # Sort remaining tasks unless order is preserved
     if not preserve_order:
         normal_tasks = sort_tasks(normal_tasks)
         quick_tasks = sort_tasks(quick_tasks)
 
-    # Apply context-aware grouping
+    # Context-aware grouping
     categories = load_categories()
     normal_tasks = apply_context_grouping(normal_tasks, categories)
 
-    # Scheduling variables
+    # Scheduling setup
     plan = []
     blockId = 1
     current_work_block = None
@@ -58,47 +55,84 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
     shortBreak = 5
     longBreak = 15
 
-    # Counters for break logic
-    substantial_blocks = 0          # count of substantial blocks (>= 20 min)
-    work_since_last_break = 0       # continuous work minutes since last break
+    substantial_blocks = 0
+    work_since_last_break = 0
+    CONTINUOUS_WORK_THRESHOLD = 40
 
-    # Thresholds (tunable)
-    CONTINUOUS_WORK_THRESHOLD = 40  # minutes of continuous work to force a short break
+    # ---------------------------------------------------------
+    # Helper: finalize a current work block
+    # ---------------------------------------------------------
+    def finalize_current_work_block():
+        nonlocal current_work_block, blockId, plan
 
+        if not current_work_block:
+            return
+
+        # Convert list[dict] → list[SplitInfo]
+        splitInfos = (
+            [SplitInfo(**s) for s in current_work_block["splitInfos"]]
+            if current_work_block["splitInfos"] else None
+        )
+
+        plan.append(
+            PlanBlock(
+                blockId=current_work_block["blockId"],
+                type="work",
+                durationMinutes=current_work_block["durationMinutes"],
+                tasks=current_work_block["tasks"],
+                splitInfos=splitInfos
+            )
+        )
+
+        blockId += 1
+        current_work_block = None
+
+    # ---------------------------------------------------------
+    # Helper: add tasks to working block
+    # ---------------------------------------------------------
     def add_to_work_block(duration, tasks, split_info):
         nonlocal current_work_block, blockId
 
-        # If no work block currently active → start one
+        # Create a new block if needed
         if current_work_block is None:
             current_work_block = {
                 "blockId": blockId,
-                "type": "work",
                 "durationMinutes": 0,
                 "tasks": [],
                 "splitInfos": []
             }
 
-        # Add tasks to the current block
+        # Add duration + tasks
         current_work_block["durationMinutes"] += duration
-        current_work_block["tasks"].extend([t.id for t in tasks])
+        current_work_block["tasks"].extend(t.id for t in tasks)
 
-        # Track split info
+        # Track multiple split infos
         if split_info:
             current_work_block["splitInfos"].append(split_info)
-    
+
+    # ---------------------------------------------------------
+    # Helper: add a break block
+    # ---------------------------------------------------------
+    def add_break(duration):
+        nonlocal plan, blockId
+        plan.append(
+            PlanBlock(
+                blockId=blockId,
+                type="break",
+                durationMinutes=duration,
+                tasks=[],
+                splitInfos=None
+            )
+        )
+        blockId += 1
+
+    # ---------------------------------------------------------
+    # Helper: break logic
+    # ---------------------------------------------------------
     def maybe_add_break(last_block_duration):
-        """
-        Update continuous work counters and add a break if needed.
-        - Adds a break when continuous work_since_last_break >= CONTINUOUS_WORK_THRESHOLD.
-        - Uses longBreak when substantial_blocks % 4 == 0.
-        - Resets work_since_last_break when a break is added.
-        """
-        nonlocal blockId, substantial_blocks, work_since_last_break, current_work_block
+        nonlocal work_since_last_break, substantial_blocks
 
-        # Update continuous work counter
         work_since_last_break += last_block_duration
-
-        # Count substantial blocks (>=20 min)
         if last_block_duration >= 20:
             substantial_blocks += 1
 
@@ -106,35 +140,15 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
         if work_since_last_break < CONTINUOUS_WORK_THRESHOLD:
             return
 
-        # -----------------------------------------------------
-        # Finalize current work block first (if one exists)
-        # -----------------------------------------------------
-        if current_work_block:
-            splitInfos = current_work_block.get("splitInfos", [])
-            splitInfo = splitInfos[0] if len(splitInfos) == 1 else None
-            plan.append(
-                PlanBlock(
-                    blockId=current_work_block["blockId"],
-                    type="work",
-                    durationMinutes=current_work_block["durationMinutes"],
-                    tasks=current_work_block["tasks"],
-                    splitInfo=splitInfo
-                )
-            )
-            blockId += 1
-            current_work_block = None
+        # Finalize current block before break
+        finalize_current_work_block()
 
-        # -----------------------------------------------------
-        # Add appropriate break (long every 4 substantial blocks)
-        # -----------------------------------------------------
-        if substantial_blocks > 0 and (substantial_blocks % 4 == 0):
-            append_break_block(plan, blockId, longBreak)
+        # Long break every 4 substantial blocks
+        if substantial_blocks % 4 == 0:
+            add_break(longBreak)
         else:
-            append_break_block(plan, blockId, shortBreak)
+            add_break(shortBreak)
 
-        blockId += 1  # REQUIRED: increment after adding break
-
-        # Reset continuous-work counter
         work_since_last_break = 0
 
     # -----------------------------------------------------------------
@@ -143,8 +157,6 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
     if quick_motivation:
         dur = quick_motivation.durationMinutes
         add_to_work_block(dur, [quick_motivation], None)
-        # we still call maybe_add_break to update counters, but this will NOT add a break
-        # unless threshold is reached.
         maybe_add_break(dur)
 
     # -----------------------------------------------------------------
@@ -154,22 +166,18 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
         anchor = normal_tasks.pop(0)
         remaining = anchor.durationMinutes
 
-        # Fill first block with anchor
-        if remaining > blockLength:
-            split_dur = blockLength
-            remaining -= blockLength
-        else:
-            split_dur = remaining
-            remaining = 0
+        split_dur = min(remaining, blockLength)
+        remaining -= split_dur
 
-        split_info = None
-        if anchor.durationMinutes > blockLength:
-            total_parts = math.ceil(anchor.durationMinutes / blockLength)
-            split_info = {
+        total_parts = math.ceil(anchor.durationMinutes / blockLength)
+        split_info = (
+            {
                 "originalTaskId": anchor.id,
-                "part": 1,             # first chunk
+                "part": 1,
                 "totalParts": total_parts
             }
+            if total_parts > 1 else None
+        )
 
         add_to_work_block(split_dur, [anchor], split_info)
 
@@ -177,154 +185,78 @@ def generate_plan(payload: PlanGenerateRequest, preserve_order: bool = False):
             anchor.durationMinutes = remaining
             normal_tasks.insert(0, anchor)
 
-        # Update break logic (may add break if continuous work threshold reached)
         maybe_add_break(split_dur)
 
     # -----------------------------------------------------------------
-    # Step 3: Micro task batch
+    # Step 3: Micro-task batch
     # -----------------------------------------------------------------
-    if quick_tasks:
-        total_quick = sum(t.durationMinutes for t in quick_tasks)
+    while quick_tasks:
+        used = 0
+        batch = []
 
-        while quick_tasks:
-            used = 0
-            batch = []
+        for t in list(quick_tasks):
+            if used + t.durationMinutes <= blockLength:
+                batch.append(t)
+                used += t.durationMinutes
+                quick_tasks.remove(t)
+            else:
+                break
 
-            for t in list(quick_tasks):
-                if used + t.durationMinutes <= blockLength:
-                    batch.append(t)
-                    used += t.durationMinutes
-                    quick_tasks.remove(t)
-                else:
-                    break
-
-            add_to_work_block(used, batch, None)
-            maybe_add_break(used)
+        add_to_work_block(used, batch, None)
+        maybe_add_break(used)
 
     # -----------------------------------------------------------------
-    # Step 4: Remaining normal tasks (NO multi-task mixing)
+    # Step 4: Remaining normal tasks
     # -----------------------------------------------------------------
     while normal_tasks:
-
         t = normal_tasks.pop(0)
-        remaining = t.durationMinutes
+        original = t.durationMinutes
+        total_parts = math.ceil(original / blockLength)
+        remaining = original
+        part_index = 1
 
         while remaining > 0:
-            original = t.durationMinutes
-            total_parts = math.ceil(original / blockLength)
-            completed = math.floor((original - remaining) / blockLength)
-            current_part = completed + 1
+            dur = min(remaining, blockLength)
 
-            if remaining > blockLength:
-                dur = blockLength
-            else:
-                dur = remaining
-
-            # ALWAYS generate split_info when total_parts > 1
-            if total_parts > 1:
-                split_info = {
+            split_info = (
+                {
                     "originalTaskId": t.id,
-                    "part": current_part,
+                    "part": part_index,
                     "totalParts": total_parts
                 }
-            else:
-                split_info = None
+                if total_parts > 1 else None
+            )
 
             add_to_work_block(dur, [t], split_info)
 
-            # ---- update counters manually for this chunk ----
-            # note: we update the same counters maybe_add_break would,
-            # because we may need to force a break between parts.
             work_since_last_break += dur
             if dur >= 20:
                 substantial_blocks += 1
 
-            # If this task still has remaining time, FORCE a short break
-            # between its chunks (this prevents long continuous stretches).
-            if remaining - dur > 0:
-                if current_work_block:
-                    splitInfos = current_work_block.get("splitInfos", [])
-                    splitInfo = splitInfos[0] if len(splitInfos) == 1 else None
-                    plan.append(
-                        PlanBlock(
-                            blockId=current_work_block["blockId"],
-                            type="work",
-                            durationMinutes=current_work_block["durationMinutes"],
-                            tasks=current_work_block["tasks"],
-                            splitInfo=splitInfo
-                        )
-                    )
-                    blockId += 1
-                    current_work_block = None
-                append_break_block(plan, blockId, shortBreak)
-                blockId += 1
-
-                # reset continuous-work counter after forced break
-                work_since_last_break = 0
-            else:
-                # No remaining time for this task — use normal threshold logic
-                if work_since_last_break >= CONTINUOUS_WORK_THRESHOLD:
-                    # choose long break every 4 substantial blocks
-                    if substantial_blocks > 0 and (substantial_blocks % 4 == 0):
-                        if current_work_block:
-                            splitInfos = current_work_block.get("splitInfos", [])
-                            splitInfo = splitInfos[0] if len(splitInfos) == 1 else None
-                            plan.append(
-                                PlanBlock(
-                                    blockId=current_work_block["blockId"],
-                                    type="work",
-                                    durationMinutes=current_work_block["durationMinutes"],
-                                    tasks=current_work_block["tasks"],
-                                    splitInfo=splitInfo
-                                )
-                            )
-                            blockId += 1
-                            current_work_block = None
-                        append_break_block(plan, blockId, longBreak)
-                    else:
-                        if current_work_block:
-                            splitInfos = current_work_block.get("splitInfos", [])
-                            splitInfo = splitInfos[0] if len(splitInfos) == 1 else None
-                            plan.append(
-                                PlanBlock(
-                                    blockId=current_work_block["blockId"],
-                                    type="work",
-                                    durationMinutes=current_work_block["durationMinutes"],
-                                    tasks=current_work_block["tasks"],
-                                    splitInfo=splitInfo
-                                )
-                            )
-                            blockId += 1
-                            current_work_block = None
-                        append_break_block(plan, blockId, shortBreak)
-                    blockId += 1
-                    work_since_last_break = 0
-
-            # decrement remaining after handling break logic
             remaining -= dur
 
-    if current_work_block:
-        splitInfos = current_work_block.get("splitInfos", [])
-        splitInfo = splitInfos[0] if len(splitInfos) == 1 else None
-        plan.append(
-            PlanBlock(
-                blockId=current_work_block["blockId"],
-                type="work",
-                durationMinutes=current_work_block["durationMinutes"],
-                tasks=current_work_block["tasks"],
-                splitInfo=splitInfo
-            )
-        )
-        blockId += 1
-        current_work_block = None
+            if remaining > 0:
+                # forced break between chunks
+                finalize_current_work_block()
+                add_break(shortBreak)
+                work_since_last_break = 0
+
+            else:
+                # normal threshold-based break
+                maybe_add_break(dur)
+
+            part_index += 1
 
     # -----------------------------------------------------------------
-    # SESSION END — No break added here: remove any trailing break added by logic
+    # Finalize any open work block
     # -----------------------------------------------------------------
-    if plan and getattr(plan[-1], "type", None) == "break":
+    finalize_current_work_block()
+
+    # Remove trailing break
+    if plan and plan[-1].type == "break":
         plan.pop()
 
-    totalDuration = sum(block.durationMinutes for block in plan)
+    totalDuration = sum(b.durationMinutes for b in plan)
 
     return PlanGenerateResponse(
         blocks=plan,
@@ -459,7 +391,7 @@ def append_break_block(plan, blockId, duration):
             type="break",
             durationMinutes=duration,
             tasks=[],
-            splitInfo=None,
+            splitInfos=None,
         )
     )
 
